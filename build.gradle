@@ -67,3 +67,52 @@ jar {
         ])
     }
 }
+
+// ---------------------------------------------------------------------------
+// Zwei Varianten aus einer Codebasis:
+//   jar        -> apx-mapzones-...         ohne Rechteverwaltung
+//   protectJar -> apx-mapzones-protect-... mit Rechteverwaltung
+// Unterschied sind nur zwei Ressourcen: mapzones-features.json und der
+// Anzeigename in der neoforge.mods.toml. Die Mod-ID bleibt gleich, damit immer
+// nur eine der beiden Varianten installiert sein kann.
+// ---------------------------------------------------------------------------
+
+def protectResources = layout.buildDirectory.dir('variant/protect')
+
+def generateProtectResources = tasks.register('generateProtectResources') {
+    outputs.dir(protectResources)
+    doLast {
+        def dir = protectResources.get().asFile
+        dir.deleteDir()
+        new File(dir, 'META-INF').mkdirs()
+        new File(dir, 'mapzones-features.json').text = """{
+  "protection": true
+}
+"""
+        def toml = file('src/main/resources/META-INF/neoforge.mods.toml').text
+            .replace('${mod_id}', mod_id)
+            .replace('${mod_version}', mod_version)
+            .replace('displayName = "APX Map Zones"', 'displayName = "APX Map Zones (Protect)"')
+        new File(dir, 'META-INF/neoforge.mods.toml').text = toml
+    }
+}
+
+tasks.register('protectJar', Jar) {
+    dependsOn generateProtectResources
+    archiveBaseName = "apx-${mod_id}-protect-neoforge-${minecraft_version}"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Variantendateien zuerst, damit sie die Standardressourcen verdraengen.
+    from(protectResources)
+    from(sourceSets.main.output)
+    manifest {
+        attributes([
+            'Specification-Title'   : mod_id,
+            'Implementation-Title'  : mod_id,
+            'Implementation-Version': project.version
+        ])
+    }
+}
+
+tasks.named('build') {
+    dependsOn 'protectJar'
+}

@@ -29,6 +29,7 @@ public final class Zone {
     private final String ownerName;
     private String name;
     private int color;
+    private ZonePermissions permissions = new ZonePermissions();
 
     public Zone(UUID id, String name, int color, ResourceLocation dimension,
                 List<ChunkRect> rects, UUID owner, String ownerName) {
@@ -79,6 +80,20 @@ public final class Zone {
 
     public String ownerName() {
         return ownerName;
+    }
+
+    /** Bau-, Abbau- und Benutzungsrechte dieser Zone. */
+    public ZonePermissions permissions() {
+        return permissions;
+    }
+
+    public void setPermissions(ZonePermissions permissions) {
+        this.permissions = permissions == null ? new ZonePermissions() : permissions;
+    }
+
+    /** true, wenn der Spieler die Zone besitzt und daher nie eingeschraenkt wird. */
+    public boolean isOwner(UUID uuid) {
+        return owner != null && uuid != null && owner.equals(uuid);
     }
 
     public List<ChunkRect> rects() {
@@ -191,7 +206,9 @@ public final class Zone {
     }
 
     public Zone copy() {
-        return new Zone(id, name, color, dimension, new ArrayList<>(rects), owner, ownerName);
+        Zone copy = new Zone(id, name, color, dimension, new ArrayList<>(rects), owner, ownerName);
+        copy.permissions = permissions.copy();
+        return copy;
     }
 
     public CompoundTag save() {
@@ -209,6 +226,7 @@ public final class Zone {
             tag.putUUID("Owner", owner);
         }
         tag.putString("OwnerName", ownerName == null ? "" : ownerName);
+        tag.put("Permissions", permissions.save());
         return tag;
     }
 
@@ -230,7 +248,7 @@ public final class Zone {
         if (rects.isEmpty()) {
             return null;
         }
-        return new Zone(
+        Zone zone = new Zone(
             tag.hasUUID("Id") ? tag.getUUID("Id") : UUID.randomUUID(),
             tag.getString("Name"),
             tag.getInt("Color"),
@@ -239,6 +257,10 @@ public final class Zone {
             tag.hasUUID("Owner") ? tag.getUUID("Owner") : null,
             tag.getString("OwnerName")
         );
+        if (tag.contains("Permissions", Tag.TAG_COMPOUND)) {
+            zone.setPermissions(ZonePermissions.load(tag.getCompound("Permissions")));
+        }
+        return zone;
     }
 
     public static final StreamCodec<FriendlyByteBuf, Zone> STREAM_CODEC = StreamCodec.of(
@@ -256,6 +278,7 @@ public final class Zone {
                 buf.writeUUID(zone.owner);
             }
             buf.writeUtf(zone.ownerName == null ? "" : zone.ownerName, 32);
+            ZonePermissions.STREAM_CODEC.encode(buf, zone.permissions);
         },
         buf -> {
             UUID id = buf.readUUID();
@@ -269,7 +292,9 @@ public final class Zone {
             }
             UUID owner = buf.readBoolean() ? buf.readUUID() : null;
             String ownerName = buf.readUtf(32);
-            return new Zone(id, name, color, dimension, rects, owner, ownerName);
+            Zone zone = new Zone(id, name, color, dimension, rects, owner, ownerName);
+            zone.setPermissions(ZonePermissions.STREAM_CODEC.decode(buf));
+            return zone;
         }
     );
 }

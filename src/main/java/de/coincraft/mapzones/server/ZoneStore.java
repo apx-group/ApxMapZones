@@ -111,6 +111,18 @@ public class ZoneStore extends SavedData {
         return result;
     }
 
+    /** Zone an einem Chunk; bei Ueberlappung gewinnt die kleinere Zone. */
+    public Zone zoneAt(ResourceLocation dimension, int chunkX, int chunkZ) {
+        Zone best = null;
+        for (Zone zone : zones.values()) {
+            if (zone.dimension().equals(dimension) && zone.contains(chunkX, chunkZ)
+                && (best == null || zone.chunkCount() < best.chunkCount())) {
+                best = zone;
+            }
+        }
+        return best;
+    }
+
     public int countOwnedBy(UUID owner) {
         int count = 0;
         for (Zone zone : zones.values()) {

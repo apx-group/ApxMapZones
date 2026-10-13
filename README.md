@@ -6,11 +6,23 @@ Marked areas ("zones") on **Xaero's World Map** — stored server-side and visib
 * Required on the client: **Xaero's World Map** (tested with 1.47.0)
 * Xaero is **not** required on the server
 
+## Two builds
+
+The same code base produces two JARs. Install **one** of them - they share the mod id, so
+the game refuses to start with both.
+
+| JAR | Zones | Build/break permissions |
+|---|---|---|
+| `apx-mapzones-neoforge-...` | yes | no |
+| `apx-mapzones-protect-neoforge-...` | yes | yes |
+
+Zone data is compatible in both directions, so you can switch builds without losing zones.
+
 ## Installation
 
 | Location | What |
 |---|---|
-| Server `mods/` | `apx-mapzones-neoforge-1.21.1-1.0.1+mc1.21.1.jar` |
+| Server `mods/` | `apx-mapzones-neoforge-1.21.1-1.1.0+mc1.21.1.jar` (or the `-protect-` build) |
 | Every client `mods/` | The same JAR |
 
 The server stores all zones in `world/data/mapzones.dat`. Clients without the mod can still play — they just won't see the zones.
@@ -33,6 +45,26 @@ The zone immediately appears for all players on the server.
 * Drag a selection that touches an existing zone → **"Add Selection to Zone: ..."**. This allows a zone to grow into any shape without creating a dividing line.
 * Right-click a zone → **"Merge with: ..."** for each adjacent neighboring zone. The clicked zone retains its name, color, and owner, and the border between the two zones disappears.
 * **Automatic:** If two zones with *identical names and identical colors* touch, they are immediately merged into a single zone — including when renaming or recoloring them.
+
+## Permissions inside a zone (Protect build only)
+
+By default every zone is open: anyone may build, break and use blocks. The owner can
+restrict this per zone.
+
+1. Right-click the zone on the world map → **"Edit Zone: ..."**
+2. Click **"Permissions in this zone..."**
+3. Turn off *Everyone may build / break / use blocks* as needed.
+4. Add single players by name and tick **build**, **break** and **use** individually.
+
+* The zone owner always keeps full access to their own zone.
+* The restriction applies to **everyone else, including server operators**. Operators can
+  still edit any zone, so they can add themselves to the list when they need access.
+* Changing permissions has a 10 second cooldown per player (operators are exempt).
+* A player must have joined the server at least once so the server knows their UUID.
+* Blocked actions: breaking and placing blocks, and using blocks such as chests, furnaces,
+  doors, buttons and levers.
+
+Fallback command: `/mapzone perms <zone> [public <build|break|use> <true|false> | player <name> <build> <break> <use>]`
 
 ## Commands
 

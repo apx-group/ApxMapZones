@@ -1,5 +1,6 @@
 package de.coincraft.mapzones.client.gui;
 
+import de.coincraft.mapzones.Features;
 import de.coincraft.mapzones.net.Payloads;
 import de.coincraft.mapzones.zone.ChunkRect;
 import de.coincraft.mapzones.server.ZoneColors;
@@ -19,7 +20,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class ZoneEditScreen extends Screen {
 
     private static final int PANEL_WIDTH = 248;
-    private static final int PANEL_HEIGHT = 186;
+    private static final int PANEL_HEIGHT = 186 + (Features.PROTECTION ? 26 : 0);
     private static final int SWATCH_SIZE = 18;
     private static final int SWATCHES_PER_ROW = 8;
 
@@ -86,6 +87,12 @@ public class ZoneEditScreen extends Screen {
         hexBox.setValue(String.format("#%06X", color));
         hexBox.setResponder(this::onHexChanged);
         addRenderableWidget(hexBox);
+
+        if (Features.PROTECTION && existing != null) {
+            addRenderableWidget(Button.builder(Component.translatable("gui.mapzones.permissions"),
+                    button -> minecraft.setScreen(new ZonePermissionScreen(parent, existing)))
+                .bounds(panelLeft + 14, panelTop + PANEL_HEIGHT - 52, PANEL_WIDTH - 28, 20).build());
+        }
 
         int buttonsTop = panelTop + PANEL_HEIGHT - 28;
         int buttonWidth = existing == null ? 104 : 72;
@@ -208,7 +215,7 @@ public class ZoneEditScreen extends Screen {
             : Component.translatable("gui.mapzones.zone_info",
                 existing.chunkCount(), existing.rectCount(),
                 existing.ownerName() == null || existing.ownerName().isEmpty() ? "-" : existing.ownerName());
-        graphics.drawString(font, area, panelLeft + 14, panelTop + PANEL_HEIGHT - 44, 0x909090);
+        graphics.drawString(font, area, panelLeft + 14, panelTop + PANEL_HEIGHT - (Features.PROTECTION ? 70 : 44), 0x909090);
 
         String dimensionText = dimension == null ? "?" : dimension.toString().toLowerCase(Locale.ROOT);
         graphics.drawString(font, Component.literal(dimensionText), previewLeft + 26, previewTop + 5, 0x707070);

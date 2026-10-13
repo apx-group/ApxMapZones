@@ -161,6 +161,50 @@ public final class Payloads {
         }
     }
 
+    /** Ein Eintrag der Rechteliste, so wie ihn die Karte verschickt (mit Spielername). */
+    public record AccessEntry(String name, boolean build, boolean breakBlocks, boolean interact) {
+    }
+
+    /** C2S: Bau-, Abbau- und Benutzungsrechte einer Zone setzen. */
+    public record PermissionsRequest(UUID zoneId, boolean publicBuild, boolean publicBreak, boolean publicInteract,
+                                     List<AccessEntry> entries) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<PermissionsRequest> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(MapZones.MOD_ID, "permissions_request"));
+
+        public static final StreamCodec<FriendlyByteBuf, PermissionsRequest> CODEC = StreamCodec.of(
+            (buf, payload) -> {
+                buf.writeUUID(payload.zoneId);
+                buf.writeBoolean(payload.publicBuild);
+                buf.writeBoolean(payload.publicBreak);
+                buf.writeBoolean(payload.publicInteract);
+                buf.writeVarInt(payload.entries.size());
+                for (AccessEntry entry : payload.entries) {
+                    buf.writeUtf(entry.name(), 16);
+                    buf.writeBoolean(entry.build());
+                    buf.writeBoolean(entry.breakBlocks());
+                    buf.writeBoolean(entry.interact());
+                }
+            },
+            buf -> {
+                UUID zoneId = buf.readUUID();
+                boolean publicBuild = buf.readBoolean();
+                boolean publicBreak = buf.readBoolean();
+                boolean publicInteract = buf.readBoolean();
+                int count = buf.readVarInt();
+                List<AccessEntry> entries = new ArrayList<>(count);
+                for (int i = 0; i < count; i++) {
+                    entries.add(new AccessEntry(buf.readUtf(16), buf.readBoolean(), buf.readBoolean(), buf.readBoolean()));
+                }
+                return new PermissionsRequest(zoneId, publicBuild, publicBreak, publicInteract, entries);
+            }
+        );
+
+        @Override
+        public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     /** C2S: Zone loeschen. */
     public record DeleteRequest(UUID id) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<DeleteRequest> TYPE =

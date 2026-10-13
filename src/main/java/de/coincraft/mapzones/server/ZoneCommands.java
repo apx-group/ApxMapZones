@@ -1,5 +1,6 @@
 package de.coincraft.mapzones.server;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -7,8 +8,11 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import de.coincraft.mapzones.Features;
 import de.coincraft.mapzones.zone.ChunkRect;
 import de.coincraft.mapzones.zone.Zone;
+import de.coincraft.mapzones.zone.ZoneAccess;
+import de.coincraft.mapzones.zone.ZonePermissions;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -19,7 +23,10 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.commands.arguments.GameProfileArgument;
 import net.minecraft.server.level.ColumnPos;
+import com.mojang.authlib.GameProfile;
+import java.util.Collection;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 /** /mapzone ... als Alternative zur Weltkarten-Oberflaeche. */
@@ -87,6 +94,25 @@ public final class ZoneCommands {
                 .then(Commands.argument("name", StringArgumentType.string())
                     .suggests(ZONE_NAMES)
                     .executes(ZoneCommands::delete)));
+
+        if (Features.PROTECTION) {
+            root = root.then(Commands.literal("perms")
+                .then(Commands.argument("name", StringArgumentType.string())
+                    .suggests(ZONE_NAMES)
+                    .executes(ZoneCommands::showPermissions)
+                    .then(Commands.literal("public")
+                        .then(Commands.argument("what", StringArgumentType.word())
+                            .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                List.of("build", "break", "use"), builder))
+                            .then(Commands.argument("allowed", BoolArgumentType.bool())
+                                .executes(ZoneCommands::setPublicPermission))))
+                    .then(Commands.literal("player")
+                        .then(Commands.argument("target", GameProfileArgument.gameProfile())
+                            .then(Commands.argument("build", BoolArgumentType.bool())
+                                .then(Commands.argument("break", BoolArgumentType.bool())
+                                    .then(Commands.argument("use", BoolArgumentType.bool())
+                                        .executes(ZoneCommands::setPlayerPermission))))))));
+        }
 
         event.getDispatcher().register(root);
     }
@@ -177,6 +203,60 @@ public final class ZoneCommands {
         CommandSourceStack source = context.getSource();
         Zone zone = findZone(context, "name");
         return apply(source, ZoneManager.delete(source.getServer(), ZoneActor.of(source), zone.id()));
+    }
+
+    private static int showPermissions(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        Zone zone = findZone(context, "name");
+        ZonePermissions permissions = zone.permissions();
+        source.sendSuccess(() -> Component.translatable("message.mapzones.perms_header",
+            Component.literal(zone.name()).withStyle(style -> style.withColor(zone.color()))), false);
+        source.sendSuccess(() -> Component.translatable("message.mapzones.perms_public",
+            yesNo(permissions.publicBuild()), yesNo(permissions.publicBreak()), yesNo(permissions.publicInteract()))
+            .withStyle(ChatFormatting.GRAY), false);
+        for (ZoneAccess access : permissions.players()) {
+            source.sendSuccess(() -> Component.literal(String.format(" %s: %s %s %s",
+                access.name(), yesNo(access.build()), yesNo(access.breakBlocks()), yesNo(access.interact())))
+                .withStyle(ChatFormatting.GRAY), false);
+        }
+        return 1;
+    }
+
+    private static int setPublicPermission(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        Zone zone = findZone(context, "name");
+        boolean allowed = BoolArgumentType.getBool(context, "allowed");
+        String what = StringArgumentType.getString(context, "what").toLowerCase(java.util.Locale.ROOT);
+
+        ZonePermissions permissions = zone.permissions().copy();
+        switch (what) {
+            case "build" -> permissions.setPublicBuild(allowed);
+            case "break" -> permissions.setPublicBreak(allowed);
+            case "use", "interact" -> permissions.setPublicInteract(allowed);
+            default -> throw error("message.mapzones.bad_permission", what);
+        }
+        return apply(source, ZoneManager.setPermissions(source.getServer(), ZoneActor.of(source), zone.id(), permissions));
+    }
+
+    private static int setPlayerPermission(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        Zone zone = findZone(context, "name");
+        Collection<GameProfile> profiles = GameProfileArgument.getGameProfiles(context, "target");
+        if (profiles.isEmpty()) {
+            throw error("message.mapzones.unknown_players", "?");
+        }
+        GameProfile profile = profiles.iterator().next();
+
+        ZonePermissions permissions = zone.permissions().copy();
+        permissions.put(new ZoneAccess(profile.getId(), profile.getName(),
+            BoolArgumentType.getBool(context, "build"),
+            BoolArgumentType.getBool(context, "break"),
+            BoolArgumentType.getBool(context, "use")));
+        return apply(source, ZoneManager.setPermissions(source.getServer(), ZoneActor.of(source), zone.id(), permissions));
+    }
+
+    private static String yesNo(boolean value) {
+        return value ? "ja" : "nein";
     }
 
     private static ChunkRect rectFromArguments(CommandContext<CommandSourceStack> context) {

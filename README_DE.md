@@ -3,6 +3,18 @@
 Markierte Bereiche ("Zonen") auf **Xaero's World Map** – serverseitig gespeichert und für
 alle Spieler sichtbar. Bereiche werden auf der Karte ausgewählt, benannt und gefärbt.
 
+## Zwei Varianten
+
+Aus derselben Codebasis entstehen zwei Jars. Installiere **eine** davon - beide teilen sich
+die Mod-ID, das Spiel startet also nicht mit beiden gleichzeitig.
+
+| Jar | Zonen | Bau-/Abbaurechte |
+|---|---|---|
+| `apx-mapzones-neoforge-...` | ja | nein |
+| `apx-mapzones-protect-neoforge-...` | ja | ja |
+
+Die gespeicherten Zonen sind in beide Richtungen kompatibel, ein Wechsel kostet also keine Daten.
+
 * Minecraft 1.21.1 · NeoForge 21.1.248
 * Benötigt auf dem Client: **Xaero's World Map** (getestet mit 1.47.0)
 * Auf dem Server wird Xaero **nicht** gebraucht
@@ -11,7 +23,7 @@ alle Spieler sichtbar. Bereiche werden auf der Karte ausgewählt, benannt und ge
 
 | Wohin | Was |
 |---|---|
-| Server `mods/` | `apx-mapzones-neoforge-1.21.1-1.0.1+mc1.21.1.jar` |
+| Server `mods/` | `apx-mapzones-neoforge-1.21.1-1.1.0+mc1.21.1.jar` |
 | Jeder Client `mods/` | dieselbe Jar |
 
 Der Server speichert alle Zonen in `world/data/mapzones.dat`. Clients ohne die Mod können
@@ -39,6 +51,26 @@ Die Zone erscheint sofort bei allen Spielern auf dem Server.
   beiden verschwindet.
 * **Automatisch:** Berühren sich zwei Zonen mit *identischem Namen und identischer Farbe*,
   werden sie sofort zu einer Zone zusammengefasst – auch beim Umbenennen oder Umfärben.
+
+## Rechte in einer Zone (nur Protect-Variante)
+
+Standardmaessig ist jede Zone offen: jeder darf bauen, abbauen und Bloecke benutzen. Der
+Besitzer kann das je Zone einschraenken.
+
+1. Rechtsklick auf die Zone auf der Weltkarte → **"Zone bearbeiten: ..."**
+2. Schaltflaeche **"Rechte in dieser Zone..."**
+3. *Jeder darf bauen / abbauen / Bloecke benutzen* nach Bedarf abschalten.
+4. Einzelne Spieler per Name eintragen und **Bau**, **Abb** und **Nutz** getrennt setzen.
+
+* Der Besitzer der Zone darf in seiner eigenen Zone immer alles.
+* Die Sperre gilt fuer **alle anderen, auch fuer Server-Operatoren**. OPs duerfen aber jede
+  Zone bearbeiten und sich damit selbst eintragen, wenn sie Zugriff brauchen.
+* Rechteaenderungen haben pro Spieler 10 Sekunden Abklingzeit (OPs ausgenommen).
+* Ein Spieler muss einmal auf dem Server gewesen sein, damit der Server seine UUID kennt.
+* Blockiert werden: Bloecke abbauen und setzen sowie das Benutzen von Bloecken wie Truhen,
+  Oefen, Tueren, Knoepfen und Hebeln.
+
+Notfall-Befehl: `/mapzone perms <zone> [public <build|break|use> <true|false> | player <name> <build> <break> <use>]`
 
 ## Befehle
 

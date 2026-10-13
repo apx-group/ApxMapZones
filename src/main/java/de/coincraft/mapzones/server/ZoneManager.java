@@ -2,6 +2,9 @@ package de.coincraft.mapzones.server;
 
 import de.coincraft.mapzones.zone.ChunkRect;
 import de.coincraft.mapzones.zone.Zone;
+import de.coincraft.mapzones.zone.ZonePermissions;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -12,6 +15,11 @@ import net.minecraft.server.MinecraftServer;
  * sich identisch verhalten.
  */
 public final class ZoneManager {
+
+    /** Normale Spieler duerfen Rechte nur im Abstand von 10 Sekunden aendern. */
+    public static final long PERMISSION_COOLDOWN_MS = 10_000L;
+
+    private static final Map<UUID, Long> LAST_PERMISSION_EDIT = new HashMap<>();
 
     private ZoneManager() {
     }
@@ -154,6 +162,45 @@ public final class ZoneManager {
         ZoneSync.broadcastUpsert(server, zone);
         return Result.ok(Component.translatable("message.mapzones.updated",
             Component.literal(zone.name()).withStyle(style -> style.withColor(zone.color()))), zone);
+    }
+
+    /** Setzt die Bau-, Abbau- und Benutzungsrechte einer Zone. */
+    public static Result setPermissions(MinecraftServer server, ZoneActor actor, UUID zoneId, ZonePermissions permissions) {
+        ZoneStore store = ZoneStore.get(server);
+        Zone zone = store.byId(zoneId);
+        if (zone == null) {
+            return Result.fail("message.mapzones.unknown_zone");
+        }
+        if (!ZoneRules.canEdit(actor, zone)) {
+            return Result.fail("message.mapzones.no_permission", ownerLabel(zone));
+        }
+
+        long remaining = cooldownRemaining(actor);
+        if (remaining > 0) {
+            return Result.fail("message.mapzones.permission_cooldown", (remaining + 999) / 1000);
+        }
+        if (actor.uuid() != null && !actor.admin()) {
+            LAST_PERMISSION_EDIT.put(actor.uuid(), System.currentTimeMillis());
+        }
+
+        zone.setPermissions(permissions);
+        store.markChanged();
+        ZoneSync.broadcastUpsert(server, zone);
+        return Result.ok(Component.translatable("message.mapzones.permissions_updated",
+            Component.literal(zone.name()).withStyle(style -> style.withColor(zone.color()))), zone);
+    }
+
+    /** Verbleibende Wartezeit in Millisekunden; OPs und die Konsole warten nie. */
+    public static long cooldownRemaining(ZoneActor actor) {
+        if (actor.admin() || actor.uuid() == null) {
+            return 0L;
+        }
+        Long last = LAST_PERMISSION_EDIT.get(actor.uuid());
+        if (last == null) {
+            return 0L;
+        }
+        long elapsed = System.currentTimeMillis() - last;
+        return elapsed >= PERMISSION_COOLDOWN_MS ? 0L : PERMISSION_COOLDOWN_MS - elapsed;
     }
 
     public static Result delete(MinecraftServer server, ZoneActor actor, UUID zoneId) {

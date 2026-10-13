@@ -28,6 +28,8 @@ public final class NetworkHandler {
             ZoneRequestHandler::onMerge);
         registrar.playToServer(Payloads.EditRequest.TYPE, Payloads.EditRequest.CODEC,
             ZoneRequestHandler::onEdit);
+        registrar.playToServer(Payloads.PermissionsRequest.TYPE, Payloads.PermissionsRequest.CODEC,
+            ZoneRequestHandler::onPermissions);
         registrar.playToServer(Payloads.DeleteRequest.TYPE, Payloads.DeleteRequest.CODEC,
             ZoneRequestHandler::onDelete);
     }

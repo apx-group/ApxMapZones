@@ -2,6 +2,7 @@ package de.coincraft.mapzones;
 
 import de.coincraft.mapzones.net.NetworkHandler;
 import de.coincraft.mapzones.server.ZoneCommands;
+import de.coincraft.mapzones.server.ZoneProtectionEvents;
 import de.coincraft.mapzones.server.ZoneServerEvents;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -21,6 +22,15 @@ public class MapZones {
 
         NeoForge.EVENT_BUS.addListener(ZoneCommands::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(ZoneServerEvents::onPlayerLoggedIn);
+
+        if (Features.PROTECTION) {
+            NeoForge.EVENT_BUS.addListener(ZoneProtectionEvents::onBlockBreak);
+            NeoForge.EVENT_BUS.addListener(ZoneProtectionEvents::onBlockPlace);
+            NeoForge.EVENT_BUS.addListener(ZoneProtectionEvents::onMultiPlace);
+            NeoForge.EVENT_BUS.addListener(ZoneProtectionEvents::onRightClickBlock);
+            NeoForge.EVENT_BUS.addListener(ZoneProtectionEvents::onLeftClickBlock);
+            LOGGER.info("Map Zones laeuft mit Rechteverwaltung (Protect-Variante)");
+        }
 
         if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) {
             container.registerConfig(ModConfig.Type.CLIENT, de.coincraft.mapzones.client.ClientConfig.SPEC);
