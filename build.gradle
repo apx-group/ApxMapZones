@@ -1,0 +1,69 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = "${mod_version}+mc${minecraft_version}"
+group = 'de.coincraft'
+base { archivesName = "apx-${mod_id}-neoforge-${minecraft_version}" }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neoforge_version
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+
+    runs {
+        client {
+            client()
+            gameDirectory = file('run/client')
+            systemProperty 'mapzones.debug', 'true'
+            if (project.hasProperty('quickWorld')) {
+                programArguments.addAll '--quickPlaySingleplayer', project.property('quickWorld').toString()
+            }
+        }
+        server {
+            server()
+            gameDirectory = file('run/server')
+            programArguments.addAll '--nogui'
+        }
+    }
+}
+
+dependencies {
+    // Xaero's World Map wird nur zum Kompilieren gebraucht (Highlighter-API + Mixin-Targets).
+    compileOnly files('libs/xaeroworldmap-neoforge-1.21.1-1.47.0.jar')
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+processResources {
+    def expandProps = [
+        mod_id: mod_id,
+        mod_version: mod_version,
+        minecraft_version: minecraft_version,
+        neoforge_version: neoforge_version
+    ]
+    inputs.properties expandProps
+    filesMatching(['META-INF/neoforge.mods.toml', 'pack.mcmeta']) {
+        expand expandProps
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+            'Specification-Title'   : mod_id,
+            'Implementation-Title'  : mod_id,
+            'Implementation-Version': project.version
+        ])
+    }
+}

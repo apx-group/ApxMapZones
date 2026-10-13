@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "de.coincraft.mapzones.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "GuiMapMixin",
+    "HighlighterRegistryMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

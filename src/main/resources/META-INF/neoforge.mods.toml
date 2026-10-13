@@ -1,0 +1,34 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "APX Map Zones"
+authors = "Coin Craft"
+description = '''Markierte Bereiche (Zonen) auf Xaero's World Map: Chunk-Bereiche auswaehlen, benennen, faerben - serverseitig gespeichert und fuer alle Spieler sichtbar.'''
+
+[[mixins]]
+config = "${mod_id}.mixins.json"
+
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.0,21.2.0)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.21.2)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "xaeroworldmap"
+type = "required"
+versionRange = "[1.45.0,)"
+ordering = "AFTER"
+side = "CLIENT"
