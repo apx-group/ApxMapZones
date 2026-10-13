@@ -1,110 +1,94 @@
 # Map Zones
 
-Markierte Bereiche ("Zonen") auf **Xaero's World Map** – serverseitig gespeichert und für
-alle Spieler sichtbar. Bereiche werden auf der Karte ausgewählt, benannt und gefärbt.
+Marked areas ("zones") on **Xaero's World Map** — stored server-side and visible to all players. Areas are selected, named, and colored directly on the map.
 
 * Minecraft 1.21.1 · NeoForge 21.1.248
-* Benötigt auf dem Client: **Xaero's World Map** (getestet mit 1.47.0)
-* Auf dem Server wird Xaero **nicht** gebraucht
+* Required on the client: **Xaero's World Map** (tested with 1.47.0)
+* Xaero is **not** required on the server
 
 ## Installation
 
-| Wohin | Was |
+| Location | What |
 |---|---|
 | Server `mods/` | `apx-mapzones-neoforge-1.21.1-1.0.1+mc1.21.1.jar` |
-| Jeder Client `mods/` | dieselbe Jar |
+| Every client `mods/` | The same JAR |
 
-Der Server speichert alle Zonen in `world/data/mapzones.dat`. Clients ohne die Mod können
-weiterhin spielen – sie sehen die Zonen nur nicht.
+The server stores all zones in `world/data/mapzones.dat`. Clients without the mod can still play — they just won't see the zones.
 
-## Bedienung auf der Karte
+## Using the Map
 
-1. Weltkarte öffnen (Standard: `M`).
-2. **Rechte Maustaste gedrückt halten und ziehen** – Xaero markiert die Chunk-Auswahl.
-3. Maustaste loslassen → im Kontextmenü **„Bereich als Zone markieren…"** wählen.
-4. Namen eintippen, Farbe aus der Palette oder als `#RRGGBB` wählen, **Speichern**.
+1. Open the world map (default: `M`).
+2. **Hold the right mouse button and drag** — Xaero selects the chunks.
+3. Release the mouse button → select **"Mark Area as Zone..."** from the context menu.
+4. Enter a name, choose a color from the palette or enter a `#RRGGBB` value, then click **Save**.
 
-Die Zone erscheint sofort bei allen Spielern auf dem Server.
+The zone immediately appears for all players on the server.
 
-* Rechtsklick auf eine bestehende Zone → **„Zone bearbeiten: …"** (Name, Farbe, Löschen).
-* Rechtsklick → **„Zonen ausblenden/einblenden"** schaltet die Anzeige lokal um.
-* Beim Überfahren einer Zone zeigt die Karte unten `■ Zonenname (Ersteller)`.
+* Right-click an existing zone → **"Edit Zone: ..."** (name, color, delete).
+* Right-click → **"Hide/Show Zones"** toggles zone visibility locally.
+* Hovering over a zone displays `■ Zone Name (Creator)` at the bottom of the map.
 
-### Flächen zusammensetzen
+### Combining Areas
 
-* Auswahl ziehen, die eine vorhandene Zone berührt → **„Auswahl zu Zone hinzufügen: …"**.
-  So wächst eine Zone über beliebige Formen, ohne dass eine Trennlinie entsteht.
-* Rechtsklick auf eine Zone → **„Verbinden mit: …"** für jede angrenzende Nachbarzone.
-  Name, Farbe und Besitzer der angeklickten Zone bleiben erhalten, die Umrandung zwischen
-  beiden verschwindet.
-* **Automatisch:** Berühren sich zwei Zonen mit *identischem Namen und identischer Farbe*,
-  werden sie sofort zu einer Zone zusammengefasst – auch beim Umbenennen oder Umfärben.
+* Drag a selection that touches an existing zone → **"Add Selection to Zone: ..."**. This allows a zone to grow into any shape without creating a dividing line.
+* Right-click a zone → **"Merge with: ..."** for each adjacent neighboring zone. The clicked zone retains its name, color, and owner, and the border between the two zones disappears.
+* **Automatic:** If two zones with *identical names and identical colors* touch, they are immediately merged into a single zone — including when renaming or recoloring them.
 
-## Befehle
+## Commands
 
-Alle Koordinaten sind Blockkoordinaten; `~` funktioniert wie gewohnt.
+All coordinates are block coordinates; `~` works as usual.
 
 ```
-/mapzone list                                  Zonen der aktuellen Dimension
+/mapzone list                                  List zones in the current dimension
 /mapzone info <name>
-/mapzone create <name> <x1> <z1> <x2> <z2> [farbe]
-/mapzone here <name> <radiusInChunks> [farbe]
-/mapzone add <name> <x1> <z1> <x2> <z2>        Teilfläche zu einer Zone hinzufügen
-/mapzone merge <name> <andereZone>             zwei angrenzende Zonen verbinden
-/mapzone rename <name> <neuerName>
-/mapzone color <name> <farbe>
+/mapzone create <name> <x1> <z1> <x2> <z2> [color]
+/mapzone here <name> <radiusInChunks> [color]
+/mapzone add <name> <x1> <z1> <x2> <z2>        Add a sub-area to a zone
+/mapzone merge <name> <otherZone>               Merge two adjacent zones
+/mapzone rename <name> <newName>
+/mapzone color <name> <color>
 /mapzone delete <name>
 ```
 
-Farbe = Palettenname (`rot`, `orange`, `gelb`, `limette`, `gruen`, `tuerkis`, `cyan`,
-`hellblau`, `blau`, `violett`, `magenta`, `pink`, `braun`, `weiss`, `grau`, `schwarz`)
-oder Hex, z. B. `#3FA9F5`.
+Color = palette name (`red`, `orange`, `yellow`, `lime`, `green`, `turquoise`, `cyan`, `lightblue`, `blue`, `purple`, `magenta`, `pink`, `brown`, `white`, `gray`, `black`) or hex, e.g. `#3FA9F5`.
 
-## Rechte und Grenzen
+## Permissions and Limits
 
-* Jeder Spieler darf Zonen anlegen und **seine eigenen** bearbeiten oder löschen.
-* Spieler mit Permission-Level 2 (OP) dürfen **alle** Zonen bearbeiten und löschen.
-* Grenzen (in `ZoneRules.java` anpassbar): 500 Zonen je Server, 50 je Spieler,
-  4096 Chunks je Zone, 256 Teilflächen je Zone, 48 Zeichen je Name.
+* Every player can create zones and edit or delete **their own** zones.
+* Players with permission level 2 (OP) can edit and delete **all** zones.
+* Limits (configurable in `ZoneRules.java`): 500 zones per server, 50 per player, 4096 chunks per zone, 256 sub-areas per zone, 48 characters per name.
 
-## Clienteinstellungen
+## Client Settings
 
 `config/mapzones-client.toml`:
 
-| Option | Standard | Bedeutung |
+| Option | Default | Description |
 |---|---|---|
-| `showZones` | `true` | Zonen anzeigen |
-| `fillOpacity` | `45` | Deckkraft der Fläche in % |
-| `borderOpacity` | `95` | Deckkraft des Randes in % |
-| `showOwnerInTooltip` | `true` | Ersteller im Tooltip |
+| `showZones` | `true` | Show zones |
+| `fillOpacity` | `45` | Area fill opacity in % |
+| `borderOpacity` | `95` | Border opacity in % |
+| `showOwnerInTooltip` | `true` | Show creator in tooltip |
 
-## Technische Hinweise
+## Technical Notes
 
-* Die Zonen werden über Xaeros Highlighter-System gezeichnet
-  (`xaero.map.highlight.ChunkHighlighter`). Dieselben Kartenkacheln benutzt auch die
-  Minimap – Zonen können dort also ebenfalls erscheinen.
-* Zwei Mixins greifen in Xaero: `HighlighterRegistry#end` (Highlighter registrieren) und
-  `GuiMap#getRightClickOptions` (Kontextmenü). Bei einem größeren Xaero-Update kann es
-  sein, dass diese Namen angepasst werden müssen.
-* Fehlersuche: Start mit `-Dmapzones.debug=true` protokolliert die ersten eingefärbten
-  Chunks pro Sitzung.
+* Zones are rendered using Xaero's highlighter system (`xaero.map.highlight.ChunkHighlighter`). The minimap also uses the same map tiles, so zones may appear there as well.
+* Two mixins interact with Xaero: `HighlighterRegistry#end` (registering the highlighter) and `GuiMap#getRightClickOptions` (context menu). A major Xaero update may require these names to be adjusted.
+* Troubleshooting: Starting with `-Dmapzones.debug=true` logs the first colored chunks per session.
 
-## Bauen
+## Building
 
-Voraussetzungen: JDK 21, Gradle 8.14+.
+Requirements: JDK 21, Gradle 8.14+.
 
-Xaero's World Map wird zum Kompilieren gebraucht (Highlighter-API und Mixin-Ziele), darf
-aber aus Lizenzgruenden nicht im Repo liegen. Vor dem ersten Build die Mod-Jar selbst
-ablegen:
+Xaero's World Map is required for compilation (highlighter API and mixin targets), but cannot be included in the repository for licensing reasons. Before the first build, place the mod JAR at:
 
 ```
 libs/xaeroworldmap-neoforge-1.21.1-1.47.0.jar
 ```
 
-Fuer den Testclient zusaetzlich nach `run/client/mods/` kopieren.
+For the test client, also copy it to `run/client/mods/`.
 
 ```
-gradle build          # Ergebnis in build/libs/
-gradle runClient      # Testclient
-gradle runServer      # Testserver
+gradle build          # Output in build/libs/
+gradle runClient      # Test client
+gradle runServer      # Test server
 ```
