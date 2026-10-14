@@ -9,6 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -97,6 +99,29 @@ public final class ClientZones {
             }
         }
         return result;
+    }
+
+    /**
+     * true, wenn der lokale Spieler diese Zone aendern darf - Besitzer oder OP.
+     *
+     * Nur fuer die Oberflaeche; entschieden wird immer auf dem Server.
+     */
+    public static boolean canEditLocally(Zone zone) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null || zone == null) {
+            return false;
+        }
+        return player.hasPermissions(2) || zone.isOwner(player.getUUID());
+    }
+
+    /** Erste Zone, die den Bereich ueberdeckt und der Spieler nicht aendern darf; sonst null. */
+    public static Zone foreignOverlap(ResourceLocation dimension, ChunkRect rect) {
+        for (Zone zone : index.byId.values()) {
+            if (zone.dimension().equals(dimension) && zone.overlaps(rect) && !canEditLocally(zone)) {
+                return zone;
+            }
+        }
+        return null;
     }
 
     /** Andere Zonen, die an die angegebene Zone angrenzen - Kandidaten zum Verbinden. */

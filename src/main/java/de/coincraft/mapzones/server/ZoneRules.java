@@ -1,9 +1,18 @@
 package de.coincraft.mapzones.server;
 
+import de.coincraft.mapzones.zone.ChunkRect;
 import de.coincraft.mapzones.zone.Zone;
+import java.util.UUID;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-/** Grenzen und Rechte. Jeder darf Zonen anlegen und eigene bearbeiten, OPs duerfen alles. */
+/**
+ * Grenzen und Rechte.
+ *
+ * Jeder darf freie Flaechen zu Zonen machen und eigene Zonen bearbeiten. Wer eine
+ * Zone nicht besitzt, darf sie weder erweitern noch auf ihrer Flaeche eine weitere
+ * Zone anlegen. OPs (Rechtestufe 2) und die Konsole duerfen alles.
+ */
 public final class ZoneRules {
     public static final int MAX_ZONES_TOTAL = 500;
     public static final int MAX_ZONES_PER_PLAYER = 50;
@@ -28,6 +37,27 @@ public final class ZoneRules {
             return true;
         }
         return zone.owner() != null && actor.uuid() != null && zone.owner().equals(actor.uuid());
+    }
+
+    /**
+     * Die erste Zone, die den Bereich ueberdeckt und dem Handelnden nicht gehoert -
+     * oder null, wenn der Bereich frei ist beziehungsweise nur eigene Zonen beruehrt.
+     *
+     * Blosses Angrenzen ist erlaubt; nur echte Ueberdeckung wird geblockt. Deshalb
+     * kann ein Besitzer innerhalb seiner Zone weitere (auch kleinere) Zonen anlegen,
+     * ein Fremder dagegen nicht.
+     */
+    public static Zone findForeignOverlap(ZoneStore store, ZoneActor actor, ResourceLocation dimension,
+                                          ChunkRect rect, UUID excludeId) {
+        if (actor.admin()) {
+            return null;
+        }
+        for (Zone zone : store.findOverlapping(dimension, rect, excludeId)) {
+            if (!canEdit(actor, zone)) {
+                return zone;
+            }
+        }
+        return null;
     }
 
     /** Entfernt Steuerzeichen und Formatierungscodes und kuerzt auf die erlaubte Laenge. */

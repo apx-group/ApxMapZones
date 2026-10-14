@@ -5,7 +5,7 @@ license = "MIT"
 [[mods]]
 modId = "${mod_id}"
 version = "${mod_version}"
-displayName = "APX Map Zones"
+displayName = "Apx: Zone extention"
 authors = "Coin Craft"
 description = '''Markierte Bereiche (Zonen) auf Xaero's World Map: Chunk-Bereiche auswaehlen, benennen, faerben - serverseitig gespeichert und fuer alle Spieler sichtbar.'''
 

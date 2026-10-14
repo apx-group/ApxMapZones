@@ -1,6 +1,7 @@
 package de.coincraft.mapzones.server;
 
 import de.coincraft.mapzones.Features;
+import de.coincraft.mapzones.ZoneMessages;
 import de.coincraft.mapzones.net.Payloads;
 import de.coincraft.mapzones.zone.ZoneAccess;
 import de.coincraft.mapzones.zone.ZonePermissions;
@@ -60,8 +61,7 @@ public final class ZoneRequestHandler {
             ZoneManager.Result result = ZoneManager.setPermissions(server, actor, payload.zoneId(), permissions);
 
             if (result.success() && !unknown.isEmpty() && context.player() instanceof ServerPlayer player) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component
-                    .translatable("message.mapzones.unknown_players", String.join(", ", unknown))
+                player.sendSystemMessage(ZoneMessages.of("message.mapzones.unknown_players", String.join(", ", unknown))
                     .withStyle(ChatFormatting.YELLOW));
             }
             return result;
@@ -87,6 +87,17 @@ public final class ZoneRequestHandler {
         return server.usesAuthentication() ? null : UUIDUtil.createOfflinePlayerUUID(trimmed);
     }
 
+    public static void onTransfer(Payloads.TransferRequest payload, IPayloadContext context) {
+        run(context, (server, actor) -> {
+            String name = payload.targetName() == null ? "" : payload.targetName().trim();
+            UUID target = resolve(server, name);
+            if (target == null) {
+                return ZoneManager.Result.fail("message.mapzones.unknown_players", name.isEmpty() ? "?" : name);
+            }
+            return ZoneManager.transfer(server, actor, payload.zoneId(), target, name);
+        });
+    }
+
     public static void onDelete(Payloads.DeleteRequest payload, IPayloadContext context) {
         run(context, (server, actor) -> ZoneManager.delete(server, actor, payload.id()));
     }
@@ -101,11 +112,12 @@ public final class ZoneRequestHandler {
                 return;
             }
             ZoneManager.Result result = action.apply(server, ZoneActor.of(player));
-            if (result.success()) {
-                player.sendSystemMessage(result.message());
-            } else {
-                player.sendSystemMessage(result.message().copy().withStyle(ChatFormatting.RED));
-            }
+            player.sendSystemMessage(switch (result.kind()) {
+                case SUCCESS -> result.message();
+                // Hinweise bleiben gelb - rot wuerde wie ein Fehler der Mod aussehen.
+                case HINT -> result.message().copy().withStyle(ChatFormatting.YELLOW);
+                case PROBLEM -> result.message().copy().withStyle(ChatFormatting.RED);
+            });
         });
     }
 }

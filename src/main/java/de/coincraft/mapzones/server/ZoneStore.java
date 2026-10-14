@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -79,25 +80,43 @@ public class ZoneStore extends SavedData {
         return result;
     }
 
-    /** Beruehrende Zone mit gleichem Namen und gleicher Farbe - Kandidat zum Verschmelzen. */
-    public Zone findTouchingSameStyle(ResourceLocation dimension, String name, int color, ChunkRect rect, UUID excludeId) {
+    /**
+     * Beruehrende Zone mit gleichem Namen und gleicher Farbe - Kandidat zum Verschmelzen.
+     * Der Filter grenzt die Suche auf Zonen ein, die der Handelnde auch aendern darf.
+     */
+    public Zone findTouchingSameStyle(ResourceLocation dimension, String name, int color, ChunkRect rect,
+                                      UUID excludeId, Predicate<Zone> filter) {
         for (Zone zone : zones.values()) {
             if (zone.dimension().equals(dimension) && !zone.id().equals(excludeId)
-                && zone.sameStyleAs(name, color) && zone.touches(rect)) {
+                && zone.sameStyleAs(name, color) && zone.touches(rect)
+                && (filter == null || filter.test(zone))) {
                 return zone;
             }
         }
         return null;
     }
 
-    public Zone findTouchingSameStyle(ResourceLocation dimension, String name, int color, Zone other, UUID excludeId) {
+    public Zone findTouchingSameStyle(ResourceLocation dimension, String name, int color, Zone other,
+                                      UUID excludeId, Predicate<Zone> filter) {
         for (Zone zone : zones.values()) {
             if (zone.dimension().equals(dimension) && !zone.id().equals(excludeId)
-                && zone.sameStyleAs(name, color) && zone.touches(other)) {
+                && zone.sameStyleAs(name, color) && zone.touches(other)
+                && (filter == null || filter.test(zone))) {
                 return zone;
             }
         }
         return null;
+    }
+
+    /** Alle Zonen der Dimension, deren Flaeche sich mit dem Bereich ueberdeckt. */
+    public List<Zone> findOverlapping(ResourceLocation dimension, ChunkRect rect, UUID excludeId) {
+        List<Zone> result = new ArrayList<>();
+        for (Zone zone : zones.values()) {
+            if (zone.dimension().equals(dimension) && !zone.id().equals(excludeId) && zone.overlaps(rect)) {
+                result.add(zone);
+            }
+        }
+        return result;
     }
 
     /** Alle Zonen der Dimension, die den Bereich beruehren. */

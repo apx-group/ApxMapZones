@@ -205,6 +205,25 @@ public final class Payloads {
         }
     }
 
+    /** C2S: Zone an einen anderen Spieler uebergeben (nach Bestaetigung im Fenster). */
+    public record TransferRequest(UUID zoneId, String targetName) implements CustomPacketPayload {
+        public static final CustomPacketPayload.Type<TransferRequest> TYPE =
+            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(MapZones.MOD_ID, "transfer_request"));
+
+        public static final StreamCodec<FriendlyByteBuf, TransferRequest> CODEC = StreamCodec.of(
+            (buf, payload) -> {
+                buf.writeUUID(payload.zoneId);
+                buf.writeUtf(payload.targetName, 16);
+            },
+            buf -> new TransferRequest(buf.readUUID(), buf.readUtf(16))
+        );
+
+        @Override
+        public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     /** C2S: Zone loeschen. */
     public record DeleteRequest(UUID id) implements CustomPacketPayload {
         public static final CustomPacketPayload.Type<DeleteRequest> TYPE =

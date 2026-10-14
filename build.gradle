@@ -80,6 +80,11 @@ jar {
 def protectResources = layout.buildDirectory.dir('variant/protect')
 
 def generateProtectResources = tasks.register('generateProtectResources') {
+    // Ohne diese Inputs haelt Gradle den Task fuer aktuell, wenn sich nur die
+    // Version aendert - die Protect-Jar truege dann die alte Versionsnummer.
+    inputs.property('modId', mod_id)
+    inputs.property('modVersion', mod_version)
+    inputs.file('src/main/resources/META-INF/neoforge.mods.toml')
     outputs.dir(protectResources)
     doLast {
         def dir = protectResources.get().asFile
@@ -92,7 +97,7 @@ def generateProtectResources = tasks.register('generateProtectResources') {
         def toml = file('src/main/resources/META-INF/neoforge.mods.toml').text
             .replace('${mod_id}', mod_id)
             .replace('${mod_version}', mod_version)
-            .replace('displayName = "APX Map Zones"', 'displayName = "APX Map Zones (Protect)"')
+            .replace('displayName = "Apx: Zone extention"', 'displayName = "Apx: Zone extention (Protect)"')
         new File(dir, 'META-INF/neoforge.mods.toml').text = toml
     }
 }

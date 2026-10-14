@@ -40,24 +40,42 @@ public final class ZoneRightClickOptions {
             ChunkRect rect = ChunkRect.of(selection.getLeft(), selection.getTop(),
                 selection.getRight(), selection.getBottom());
 
-            options.add(new ZoneOption("gui.mapzones.create_zone", options.size(), target,
-                screen -> Minecraft.getInstance().setScreen(ZoneEditScreen.forNewZone(screen, dimensionId, rect))));
+            // Liegt in der Auswahl eine fremde Zone, lehnt der Server Anlegen und
+            // Erweitern ohnehin ab - dann wird es gar nicht erst angeboten.
+            Zone foreign = ClientZones.foreignOverlap(dimensionId, rect);
+            if (foreign == null) {
+                options.add(new ZoneOption("gui.mapzones.create_zone", options.size(), target,
+                    screen -> Minecraft.getInstance().setScreen(ZoneEditScreen.forNewZone(screen, dimensionId, rect))));
 
-            // Auswahl direkt an eine angrenzende Zone anhaengen - so entstehen beliebige Formen.
-            List<Zone> touching = ClientZones.zonesTouching(dimensionId, rect);
-            for (int i = 0; i < touching.size() && i < MAX_LISTED_NEIGHBOURS; i++) {
-                Zone zone = touching.get(i);
-                options.add((ZoneOption) new ZoneOption("gui.mapzones.add_to_zone", options.size(), target,
-                    screen -> {
-                        PacketDistributor.sendToServer(new Payloads.AddAreaRequest(zone.id(), rect));
-                        Minecraft.getInstance().setScreen(screen);
-                    }).setNameFormatArgs(zone.name()));
+                // Auswahl an eine eigene angrenzende Zone anhaengen - so entstehen beliebige Formen.
+                List<Zone> touching = ClientZones.zonesTouching(dimensionId, rect);
+                int listed = 0;
+                for (int i = 0; i < touching.size() && listed < MAX_LISTED_NEIGHBOURS; i++) {
+                    Zone zone = touching.get(i);
+                    if (!ClientZones.canEditLocally(zone)) {
+                        continue;
+                    }
+                    listed++;
+                    options.add((ZoneOption) new ZoneOption("gui.mapzones.add_to_zone", options.size(), target,
+                        screen -> {
+                            PacketDistributor.sendToServer(new Payloads.AddAreaRequest(zone.id(), rect));
+                            Minecraft.getInstance().setScreen(screen);
+                        }).setNameFormatArgs(zone.name()));
+                }
+            } else {
+                options.add((ZoneOption) new ZoneOption("gui.mapzones.blocked_by_zone", ChatFormatting.GRAY,
+                    options.size(), target, screen -> Minecraft.getInstance().setScreen(screen))
+                    .setNameFormatArgs(foreign.name(),
+                        foreign.ownerName() == null || foreign.ownerName().isEmpty() ? "-" : foreign.ownerName()));
             }
         }
 
         Zone zone = ClientZones.zoneAt(dimensionId, chunkX, chunkZ);
         if (zone != null) {
-            options.add((ZoneOption) new ZoneOption("gui.mapzones.edit_zone", options.size(), target,
+            // Fremde Zonen zeigt das Fenster nur an; aendern darf sie dort niemand.
+            options.add((ZoneOption) new ZoneOption(
+                ClientZones.canEditLocally(zone) ? "gui.mapzones.edit_zone" : "gui.mapzones.view_zone",
+                options.size(), target,
                 screen -> {
                     Zone current = ClientZones.byId(zone.id());
                     if (current != null) {
@@ -65,14 +83,24 @@ public final class ZoneRightClickOptions {
                     }
                 }).setNameFormatArgs(zone.name()));
 
-            List<Zone> neighbours = ClientZones.neighboursOf(zone);
-            for (int i = 0; i < neighbours.size() && i < MAX_LISTED_NEIGHBOURS; i++) {
-                Zone neighbour = neighbours.get(i);
-                options.add((ZoneOption) new ZoneOption("gui.mapzones.merge_zone", options.size(), target,
-                    screen -> {
-                        PacketDistributor.sendToServer(new Payloads.MergeRequest(zone.id(), neighbour.id()));
-                        Minecraft.getInstance().setScreen(screen);
-                    }).setNameFormatArgs(neighbour.name(), zone.name()));
+            // Verbinden setzt Rechte an beiden Zonen voraus.
+            if (ClientZones.canEditLocally(zone)) {
+                List<Zone> neighbours = ClientZones.neighboursOf(zone);
+                int listed = 0;
+                for (int i = 0; i < neighbours.size() && listed < MAX_LISTED_NEIGHBOURS; i++) {
+                    Zone neighbour = neighbours.get(i);
+                    if (!ClientZones.canEditLocally(neighbour)) {
+                        continue;
+                    }
+                    listed++;
+                    // Die angeklickte Zone wird in den Nachbarn hineingetragen: dessen
+                    // Name, Farbe und Besitzer bleiben, die angeklickte Zone geht darin auf.
+                    options.add((ZoneOption) new ZoneOption("gui.mapzones.merge_zone", options.size(), target,
+                        screen -> {
+                            PacketDistributor.sendToServer(new Payloads.MergeRequest(neighbour.id(), zone.id()));
+                            Minecraft.getInstance().setScreen(screen);
+                        }).setNameFormatArgs(zone.name(), neighbour.name()));
+                }
             }
         }
 
@@ -87,7 +115,12 @@ public final class ZoneRightClickOptions {
         private final Consumer<Screen> action;
 
         ZoneOption(String translationKey, int index, IRightClickableElement target, Consumer<Screen> action) {
-            super(translationKey, Style.EMPTY.withColor(ChatFormatting.AQUA), index, target);
+            this(translationKey, ChatFormatting.AQUA, index, target, action);
+        }
+
+        ZoneOption(String translationKey, ChatFormatting color, int index, IRightClickableElement target,
+                   Consumer<Screen> action) {
+            super(translationKey, Style.EMPTY.withColor(color), index, target);
             this.action = action;
         }
 

@@ -113,6 +113,7 @@ public class ZonePermissionScreen extends Screen {
                         case 1 -> publicBreak = !publicBreak;
                         default -> publicInteract = !publicInteract;
                     }
+                    setFocused(null);
                     return true;
                 }
             }
@@ -128,14 +129,17 @@ public class ZonePermissionScreen extends Screen {
                 int rowY = listTop + row * ROW_HEIGHT + 4;
                 if (inBox(mouseX, mouseY, columnX(0), rowY)) {
                     entry.build = !entry.build;
+                    setFocused(null);
                     return true;
                 }
                 if (inBox(mouseX, mouseY, columnX(1), rowY)) {
                     entry.breakBlocks = !entry.breakBlocks;
+                    setFocused(null);
                     return true;
                 }
                 if (inBox(mouseX, mouseY, columnX(2), rowY)) {
                     entry.interact = !entry.interact;
+                    setFocused(null);
                     return true;
                 }
                 int removeX = panelLeft + PANEL_WIDTH - 26;
@@ -158,8 +162,13 @@ public class ZonePermissionScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
+    /**
+     * Panel und Liste gehoeren in den Hintergrunddurchgang: alles, was vor
+     * super.render() gezeichnet wird, verschwimmt sonst hinter dem Weichzeichner
+     * des Screens. So liegt die Reihenfolge richtig: Abdunkeln, Panel, Widgets.
+     */
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderTransparentBackground(graphics);
         graphics.fill(panelLeft, panelTop, panelLeft + PANEL_WIDTH, panelTop + PANEL_HEIGHT, 0xF0101010);
         graphics.renderOutline(panelLeft, panelTop, PANEL_WIDTH, PANEL_HEIGHT, 0xFF6A6A6A);
@@ -197,6 +206,10 @@ public class ZonePermissionScreen extends Screen {
             }
             Entry entry = entries.get(index);
             int rowY = listTop + row * ROW_HEIGHT + 4;
+            if (mouseY >= rowY - 4 && mouseY < rowY + ROW_HEIGHT - 4
+                && mouseX >= panelLeft + 12 && mouseX <= panelLeft + PANEL_WIDTH - 12) {
+                graphics.fill(panelLeft + 12, rowY - 4, panelLeft + PANEL_WIDTH - 12, rowY + ROW_HEIGHT - 4, 0x30FFFFFF);
+            }
             graphics.drawString(font, entry.name, panelLeft + 18, rowY + 2, 0xE0E0E0);
             drawBox(graphics, columnX(0), rowY, entry.build, mouseX, mouseY);
             drawBox(graphics, columnX(1), rowY, entry.breakBlocks, mouseX, mouseY);
@@ -209,10 +222,13 @@ public class ZonePermissionScreen extends Screen {
                 + "/" + entries.size(), panelLeft + PANEL_WIDTH - 60, listTop - 11, 0x707070);
         }
 
-        super.render(graphics, mouseX, mouseY, partialTick);
-
         Component hint = notice != null ? notice : Component.translatable("gui.mapzones.permissions_hint");
         graphics.drawString(font, hint, panelLeft + 14, panelTop + PANEL_HEIGHT - 74, notice != null ? 0xFFAA55 : 0x808080);
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     private int listTop() {

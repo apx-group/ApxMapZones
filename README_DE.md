@@ -1,4 +1,4 @@
-# Map Zones
+# Apx: Zone extention
 
 Markierte Bereiche ("Zonen") auf **Xaero's World Map** – serverseitig gespeichert und für
 alle Spieler sichtbar. Bereiche werden auf der Karte ausgewählt, benannt und gefärbt.
@@ -46,9 +46,9 @@ Die Zone erscheint sofort bei allen Spielern auf dem Server.
 
 * Auswahl ziehen, die eine vorhandene Zone berührt → **„Auswahl zu Zone hinzufügen: …"**.
   So wächst eine Zone über beliebige Formen, ohne dass eine Trennlinie entsteht.
-* Rechtsklick auf eine Zone → **„Verbinden mit: …"** für jede angrenzende Nachbarzone.
-  Name, Farbe und Besitzer der angeklickten Zone bleiben erhalten, die Umrandung zwischen
-  beiden verschwindet.
+* Rechtsklick auf eine Zone → **„… in … eingliedern"** für jede angrenzende Nachbarzone.
+  Die angeklickte Zone geht in der Nachbarzone auf: deren Name, Farbe und Besitzer bleiben,
+  die angeklickte Zone verschwindet und die Umrandung zwischen beiden fällt weg.
 * **Automatisch:** Berühren sich zwei Zonen mit *identischem Namen und identischer Farbe*,
   werden sie sofort zu einer Zone zusammengefasst – auch beim Umbenennen oder Umfärben.
 
@@ -82,7 +82,7 @@ Alle Koordinaten sind Blockkoordinaten; `~` funktioniert wie gewohnt.
 /mapzone create <name> <x1> <z1> <x2> <z2> [farbe]
 /mapzone here <name> <radiusInChunks> [farbe]
 /mapzone add <name> <x1> <z1> <x2> <z2>        Teilfläche zu einer Zone hinzufügen
-/mapzone merge <name> <andereZone>             zwei angrenzende Zonen verbinden
+/mapzone merge <name> into <andereZone>       Zone in eine angrenzende Zone eingliedern
 /mapzone rename <name> <neuerName>
 /mapzone color <name> <farbe>
 /mapzone delete <name>
@@ -94,8 +94,13 @@ oder Hex, z. B. `#3FA9F5`.
 
 ## Rechte und Grenzen
 
-* Jeder Spieler darf Zonen anlegen und **seine eigenen** bearbeiten oder löschen.
-* Spieler mit Permission-Level 2 (OP) dürfen **alle** Zonen bearbeiten und löschen.
+* Jeder Spieler darf Zonen auf **freier Fläche** anlegen und **seine eigenen** bearbeiten oder löschen.
+* Eine Zone darf nur ihr Besitzer erweitern. Auch eine **weitere Zone auf der Fläche**
+  einer Zone (z. B. eine kleinere Zone darin) darf nur der Besitzer anlegen.
+  Fremde Zonen lassen sich nur **angrenzen**, nicht überdecken.
+* Zonen gleichen Namens und gleicher Farbe verschmelzen beim Berühren nur dann,
+  wenn beide demselben Spieler gehören.
+* Spieler mit Permission-Level 2 (OP) dürfen **alle** Zonen bearbeiten, erweitern und löschen.
 * Grenzen (in `ZoneRules.java` anpassbar): 500 Zonen je Server, 50 je Spieler,
   4096 Chunks je Zone, 256 Teilflächen je Zone, 48 Zeichen je Name.
 

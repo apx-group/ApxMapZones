@@ -25,8 +25,8 @@ public final class Zone {
     private final UUID id;
     private final ResourceLocation dimension;
     private final List<ChunkRect> rects = new ArrayList<>();
-    private final UUID owner;
-    private final String ownerName;
+    private UUID owner;
+    private String ownerName;
     private String name;
     private int color;
     private ZonePermissions permissions = new ZonePermissions();
@@ -82,6 +82,15 @@ public final class Zone {
         return ownerName;
     }
 
+    /**
+     * Setzt einen neuen Besitzer. Der bisherige Besitzer verliert damit alle
+     * Besitzerrechte an dieser Zone - siehe ZoneManager#transfer.
+     */
+    public void setOwner(UUID owner, String ownerName) {
+        this.owner = owner;
+        this.ownerName = ownerName == null ? "" : ownerName;
+    }
+
     /** Bau-, Abbau- und Benutzungsrechte dieser Zone. */
     public ZonePermissions permissions() {
         return permissions;
@@ -129,6 +138,16 @@ public final class Zone {
     public boolean touches(ChunkRect rect) {
         for (int i = 0; i < rects.size(); i++) {
             if (rects.get(i).touches(rect)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** true, wenn der Bereich eine Flaeche dieser Zone ueberdeckt; blosses Angrenzen zaehlt nicht. */
+    public boolean overlaps(ChunkRect rect) {
+        for (int i = 0; i < rects.size(); i++) {
+            if (rects.get(i).overlaps(rect)) {
                 return true;
             }
         }

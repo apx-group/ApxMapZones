@@ -1,4 +1,4 @@
-# Map Zones
+# Apx: Zone extention
 
 Marked areas ("zones") on **Xaero's World Map** — stored server-side and visible to all players. Areas are selected, named, and colored directly on the map.
 
@@ -43,7 +43,7 @@ The zone immediately appears for all players on the server.
 ### Combining Areas
 
 * Drag a selection that touches an existing zone → **"Add Selection to Zone: ..."**. This allows a zone to grow into any shape without creating a dividing line.
-* Right-click a zone → **"Merge with: ..."** for each adjacent neighboring zone. The clicked zone retains its name, color, and owner, and the border between the two zones disappears.
+* Right-click a zone → **"Merge ... into ..."** for each adjacent neighboring zone. The clicked zone is absorbed into the neighbor: the neighbor keeps its name, color and owner, the clicked zone disappears and the border between them is gone.
 * **Automatic:** If two zones with *identical names and identical colors* touch, they are immediately merged into a single zone — including when renaming or recoloring them.
 
 ## Permissions inside a zone (Protect build only)
@@ -76,7 +76,7 @@ All coordinates are block coordinates; `~` works as usual.
 /mapzone create <name> <x1> <z1> <x2> <z2> [color]
 /mapzone here <name> <radiusInChunks> [color]
 /mapzone add <name> <x1> <z1> <x2> <z2>        Add a sub-area to a zone
-/mapzone merge <name> <otherZone>               Merge two adjacent zones
+/mapzone merge <name> into <otherZone>          Merge a zone into an adjacent zone
 /mapzone rename <name> <newName>
 /mapzone color <name> <color>
 /mapzone delete <name>
@@ -86,8 +86,13 @@ Color = palette name (`red`, `orange`, `yellow`, `lime`, `green`, `turquoise`, `
 
 ## Permissions and Limits
 
-* Every player can create zones and edit or delete **their own** zones.
-* Players with permission level 2 (OP) can edit and delete **all** zones.
+* Every player can create zones on **unclaimed area** and edit or delete **their own** zones.
+* Only the owner may extend a zone. Creating **another zone on top of** an existing
+  zone's area (for example a smaller zone inside it) is likewise owner-only.
+  Foreign zones can only be bordered, never covered.
+* Zones with the same name and color merge on contact only when both belong to the
+  same player.
+* Players with permission level 2 (OP) can edit, extend and delete **all** zones.
 * Limits (configurable in `ZoneRules.java`): 500 zones per server, 50 per player, 4096 chunks per zone, 256 sub-areas per zone, 48 characters per name.
 
 ## Client Settings

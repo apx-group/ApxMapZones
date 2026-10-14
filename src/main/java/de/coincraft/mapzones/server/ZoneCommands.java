@@ -9,6 +9,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import de.coincraft.mapzones.Features;
+import de.coincraft.mapzones.ZoneMessages;
 import de.coincraft.mapzones.zone.ChunkRect;
 import de.coincraft.mapzones.zone.Zone;
 import de.coincraft.mapzones.zone.ZoneAccess;
@@ -20,7 +21,9 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.coordinates.ColumnPosArgument;
 import net.minecraft.core.SectionPos;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.commands.arguments.GameProfileArgument;
@@ -76,9 +79,10 @@ public final class ZoneCommands {
             .then(Commands.literal("merge")
                 .then(Commands.argument("name", StringArgumentType.string())
                     .suggests(ZONE_NAMES)
-                    .then(Commands.argument("other", StringArgumentType.string())
-                        .suggests(ZONE_NAMES)
-                        .executes(ZoneCommands::merge))))
+                    .then(Commands.literal("into")
+                        .then(Commands.argument("other", StringArgumentType.string())
+                            .suggests(ZONE_NAMES)
+                            .executes(ZoneCommands::merge)))))
             .then(Commands.literal("rename")
                 .then(Commands.argument("name", StringArgumentType.string())
                     .suggests(ZONE_NAMES)
@@ -90,6 +94,13 @@ public final class ZoneCommands {
                     .then(Commands.argument("color", StringArgumentType.word())
                         .suggests(ZoneColors.SUGGESTIONS)
                         .executes(ZoneCommands::recolor))))
+            .then(Commands.literal("transfer")
+                .then(Commands.argument("name", StringArgumentType.string())
+                    .suggests(ZONE_NAMES)
+                    .then(Commands.argument("target", GameProfileArgument.gameProfile())
+                        .executes(context -> transfer(context, false))
+                        .then(Commands.literal("confirm")
+                            .executes(context -> transfer(context, true))))))
             .then(Commands.literal("delete")
                 .then(Commands.argument("name", StringArgumentType.string())
                     .suggests(ZONE_NAMES)
@@ -124,10 +135,10 @@ public final class ZoneCommands {
             .filter(zone -> zone.dimension().equals(dim))
             .toList();
         if (zones.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable("message.mapzones.list_empty"), false);
+            source.sendSuccess(() -> ZoneMessages.of("message.mapzones.list_empty"), false);
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("message.mapzones.list_header", zones.size()), false);
+        source.sendSuccess(() -> ZoneMessages.of("message.mapzones.list_header", zones.size()), false);
         for (Zone zone : zones) {
             source.sendSuccess(() -> Component.literal(" ▪ ").withStyle(style -> style.withColor(zone.color()))
                 .append(Component.literal(zone.name()).withStyle(ChatFormatting.WHITE))
@@ -144,10 +155,10 @@ public final class ZoneCommands {
         Zone zone = findZone(context, "name");
         source.sendSuccess(() -> Component.literal("▪ ").withStyle(style -> style.withColor(zone.color()))
             .append(Component.literal(zone.name()).withStyle(ChatFormatting.WHITE)), false);
-        source.sendSuccess(() -> Component.translatable("message.mapzones.info_area",
+        source.sendSuccess(() -> ZoneMessages.of("message.mapzones.info_area",
             zone.minChunkX() << 4, zone.minChunkZ() << 4, (zone.maxChunkX() << 4) + 15, (zone.maxChunkZ() << 4) + 15,
             zone.chunkCount(), zone.rectCount()).withStyle(ChatFormatting.GRAY), false);
-        source.sendSuccess(() -> Component.translatable("message.mapzones.info_meta",
+        source.sendSuccess(() -> ZoneMessages.of("message.mapzones.info_meta",
             String.format("#%06X", zone.color()),
             zone.ownerName() == null || zone.ownerName().isEmpty() ? "-" : zone.ownerName()).withStyle(ChatFormatting.GRAY), false);
         return 1;
@@ -178,11 +189,12 @@ public final class ZoneCommands {
             zone.id(), rectFromArguments(context)));
     }
 
+    /** "merge A into B": A geht in B auf, B behaelt Name, Farbe und Besitzer. */
     private static int merge(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         CommandSourceStack source = context.getSource();
-        Zone target = findZone(context, "name");
-        Zone other = findZone(context, "other");
-        return apply(source, ZoneManager.merge(source.getServer(), ZoneActor.of(source), target.id(), other.id()));
+        Zone absorbed = findZone(context, "name");
+        Zone target = findZone(context, "other");
+        return apply(source, ZoneManager.merge(source.getServer(), ZoneActor.of(source), target.id(), absorbed.id()));
     }
 
     private static int rename(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
@@ -199,6 +211,38 @@ public final class ZoneCommands {
             zone.name(), parseColor(StringArgumentType.getString(context, "color"))));
     }
 
+    /**
+     * Ohne "confirm" wird nur gewarnt - erst der Klick auf die Bestaetigung
+     * uebertraegt die Zone. Der Besitzerwechsel ist nicht zurueckholbar.
+     */
+    private static int transfer(CommandContext<CommandSourceStack> context, boolean confirmed) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        Zone zone = findZone(context, "name");
+        if (!ZoneRules.canEdit(ZoneActor.of(source), zone)) {
+            throw error("message.mapzones.no_permission",
+                zone.ownerName() == null || zone.ownerName().isEmpty() ? "-" : zone.ownerName());
+        }
+        Collection<GameProfile> profiles = GameProfileArgument.getGameProfiles(context, "target");
+        if (profiles.isEmpty()) {
+            throw error("message.mapzones.unknown_players", "?");
+        }
+        GameProfile profile = profiles.iterator().next();
+
+        if (!confirmed) {
+            String command = String.format("/mapzone transfer \"%s\" %s confirm", zone.name(), profile.getName());
+            source.sendSuccess(() -> ZoneMessages.of("message.mapzones.transfer_warning",
+                Component.literal(zone.name()).withStyle(style -> style.withColor(zone.color())),
+                profile.getName()).withStyle(ChatFormatting.YELLOW), false);
+            source.sendSuccess(() -> ZoneMessages.of("message.mapzones.transfer_click")
+                .withStyle(style -> style.withColor(ChatFormatting.RED)
+                    .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
+                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(command)))), false);
+            return 0;
+        }
+        return apply(source, ZoneManager.transfer(source.getServer(), ZoneActor.of(source), zone.id(),
+            profile.getId(), profile.getName()));
+    }
+
     private static int delete(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
         CommandSourceStack source = context.getSource();
         Zone zone = findZone(context, "name");
@@ -209,9 +253,9 @@ public final class ZoneCommands {
         CommandSourceStack source = context.getSource();
         Zone zone = findZone(context, "name");
         ZonePermissions permissions = zone.permissions();
-        source.sendSuccess(() -> Component.translatable("message.mapzones.perms_header",
+        source.sendSuccess(() -> ZoneMessages.of("message.mapzones.perms_header",
             Component.literal(zone.name()).withStyle(style -> style.withColor(zone.color()))), false);
-        source.sendSuccess(() -> Component.translatable("message.mapzones.perms_public",
+        source.sendSuccess(() -> ZoneMessages.of("message.mapzones.perms_public",
             yesNo(permissions.publicBuild()), yesNo(permissions.publicBreak()), yesNo(permissions.publicInteract()))
             .withStyle(ChatFormatting.GRAY), false);
         for (ZoneAccess access : permissions.players()) {
@@ -268,6 +312,11 @@ public final class ZoneCommands {
     }
 
     private static int apply(CommandSourceStack source, ZoneManager.Result result) throws CommandSyntaxException {
+        if (result.kind() == ZoneManager.Result.Kind.HINT) {
+            // Erklaerung statt Befehlsfehler: der Spieler hat nichts falsch eingegeben.
+            source.sendSuccess(() -> result.message().copy().withStyle(ChatFormatting.YELLOW), false);
+            return 0;
+        }
         if (!result.success()) {
             throw new SimpleCommandExceptionType(result.message()).create();
         }
@@ -314,6 +363,6 @@ public final class ZoneCommands {
     }
 
     private static CommandSyntaxException error(String key, Object... args) {
-        return new SimpleCommandExceptionType(Component.translatable(key, args)).create();
+        return new SimpleCommandExceptionType(ZoneMessages.of(key, args)).create();
     }
 }

@@ -1,5 +1,6 @@
 package de.coincraft.mapzones.server;
 
+import de.coincraft.mapzones.ZoneMessages;
 import de.coincraft.mapzones.zone.Zone;
 import java.util.HashMap;
 import java.util.Map;
@@ -122,7 +123,7 @@ public final class ZoneProtectionEvents {
             return;
         }
         LAST_MESSAGE.put(player.getUUID(), now);
-        player.displayClientMessage(Component.translatable(messageKey,
+        player.displayClientMessage(ZoneMessages.of(messageKey,
             Component.literal(zone.name()).withStyle(style -> style.withColor(zone.color())),
             zone.ownerName() == null || zone.ownerName().isEmpty() ? "-" : zone.ownerName())
             .withStyle(ChatFormatting.RED), true);
